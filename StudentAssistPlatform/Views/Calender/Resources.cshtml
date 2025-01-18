@@ -1,0 +1,44 @@
+﻿@model StudentAssistPlatform.Models.LearningSession
+@{
+    ViewData["Title"] = "Resources for " + Model.Topic;
+}
+
+<div class="container mt-5">
+    <h1>Resources for @Model.Topic</h1>
+    <p><strong>Subject:</strong> @Model.Subject</p>
+    <p><strong>Created At:</strong> @Model.CreatedAt.ToString("f")</p>
+
+    <div class="resources-list">
+        <h3>Study Resources</h3>
+        <ul>
+            @foreach (var resource in ViewBag.Resources)
+            {
+                <li>@resource</li>
+            }
+        </ul>
+    </div>
+
+    <div class="timer-container mt-4">
+        <h3>Time Remaining: <span id="timer">05:00</span></h3>
+    </div>
+</div>
+
+<script>
+    // Timer logic
+    const redirectUrl = "/StudyTips/active-recall?Subject=@Model.Subject&Topic=@Model.Topic&StudentExplanation=&Score=0&AIFeedback=&CreatedAt=@Model.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")";
+    let timeRemaining = 5 * 60; // 5 minutes in seconds
+
+    const timerElement = document.getElementById('timer');
+    const interval = setInterval(() => {
+        const minutes = Math.floor(timeRemaining / 60);
+        const seconds = timeRemaining % 60;
+
+        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        timeRemaining--;
+
+        if (timeRemaining < 0) {
+            clearInterval(interval);
+            window.location.href = redirectUrl;
+        }
+    }, 1000);
+</script>

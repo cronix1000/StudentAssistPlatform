@@ -1,22 +1,26 @@
 ﻿@model IEnumerable<StudentAssistPlatform.Controllers.CalenderController.CalenderTask>
+
 <style>
     .calendar {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
         gap: 1rem;
     }
+
     .calendar-day {
         border: 1px solid #ddd;
         border-radius: 5px;
         padding: 10px;
-        height: 120px;
+        height: auto;
         overflow-y: auto;
         background-color: #f9f9f9;
     }
-    .calendar-day h5 {
-        margin: 0 0 5px;
-        font-size: 14px;
-    }
+
+        .calendar-day h5 {
+            margin: 0 0 5px;
+            font-size: 14px;
+        }
+
     .task-link {
         display: block;
         margin-bottom: 5px;
@@ -24,51 +28,63 @@
         color: #007bff;
     }
 </style>
-<div class="container mt-5">
-    <h1 class="text-center">Study Schedule Calendar</h1>
-    <hr />
 
+<div class="container mt-5">
+    <h1 class="text-center">Daily Learning Flow</h1>
+    <hr />
     <div id="calendar" class="calendar"></div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-<script>
-    // Pass tasks from Razor model to JavaScript
-    const tasks = @Html.Raw(Json.Serialize(Model));
 
-    // Initialize the calendar
-    function initCalendar(month, year) {
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const firstDay = new Date(year, month, 1).getDay();
+    @section scripts{
+    <script>
+        // Inject tasks from the model into the JavaScript array
+        const tasks = @Html.Raw(Json.Serialize(Model));
 
-        const calendar = $("#calendar");
-        calendar.empty();
+        function initCalendar(month, year) {
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDay = new Date(year, month, 1).getDay();
 
-        // Add empty slots for days before the 1st
-        for (let i = 0; i < firstDay; i++) {
-            calendar.append('<div class="calendar-day"></div>');
-        }
+                const calendar = $("#calendar");
+            calendar.empty();
 
-        // Populate the calendar days
-        for (let day = 1; day <= daysInMonth; day++) {
-            const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            const dayTasks = tasks.filter(task => task.date === date);
+                // Add empty slots for days before the 1st
+            for (let i = 0; i < firstDay; i++) {
+                calendar.append('<div class="calendar-day"></div>');
+                }
 
-            let dayHtml = `<div class="calendar-day">
-                <h5>${day}</h5>`;
+                // Populate the calendar days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                const dayTasks = tasks.filter(task => task.date === date);
 
-            dayTasks.forEach(task => {
-                dayHtml += `
-                    <a href="${task.url}" class="task-link" target="_blank">${task.title}</a>
-                `;
-            });
+                    let dayHtml = `<div class="calendar-day">
+                    <h5>${day}</h5>`;
 
-            dayHtml += "</div>";
-            calendar.append(dayHtml);
-        }
+                    dayTasks.forEach(task => {
+                    dayHtml += `
+                        <strong>${task.title}</strong>
+                            <ul>
+                                ${task.resources.split('\n').map(r => `<li>${r}</li>`).join("")}
+                        </ul>
+                            <p><strong>Assessment Question:</strong> ${task.assessmentQuestion}</p>
+                        <p><strong>Recall Prompt:</strong> ${task.recallPrompt}</p>
+                    <a href="/Calender/resources?Subject=${encodeURIComponent(task.subject)}&Topic=${encodeURIComponent(task.topic)}&Resources=${encodeURIComponent(task.resources)}&CreatedAt=${encodeURIComponent(task.createdAt)}"
+       class="task-link" target="_blank">
+        View Resources and Start
+    </a>
+
+                    `;
+                });
+
+                dayHtml += "</div>";
+                calendar.append(dayHtml);
+            }
+            }
+
+            // Initialize calendar with the current month
+            const today = new Date();
+            initCalendar(today.getMonth(), today.getFullYear());
+    </script>
     }
-
-    // Initialize calendar with the current month
-    const today = new Date();
-    initCalendar(today.getMonth(), today.getFullYear());
-</script>

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using StudentAssistPlatform.Models;
 
 namespace StudentAssistPlatform.Controllers
 {
@@ -17,19 +18,7 @@ namespace StudentAssistPlatform.Controllers
             return View();
         }
 
-        public class LearningSession
-        {
-            public int Id { get; set; }
-            public string StudentId { get; set; }
-            public string Subject { get; set; }
-            public string Topic { get; set; }
-            public string LearningContext { get; set; }
-            public string StudentExplanation { get; set; }
-            public int Score { get; set; }
-            public string AIFeedback { get; set; }
-            public DateTime CreatedAt { get; set; }
-        }
-
+       
         public class GradingResult
         {
             public int Score { get; set; }
@@ -49,9 +38,20 @@ namespace StudentAssistPlatform.Controllers
 
 
 
-        public IActionResult ActiveRecall()
+        [HttpGet("active-recall")]
+        public IActionResult ActiveRecall([FromQuery] string subject, [FromQuery] string topic, [FromQuery] string studentExplanation, [FromQuery] int score, [FromQuery] string aiFeedback, [FromQuery] DateTime createdAt)
         {
-            return View();
+            var learningSession = new LearningSession
+            {
+                Subject = subject,
+                Topic = topic,
+                StudentExplanation = studentExplanation,
+                Score = score,
+                AIFeedback = aiFeedback,
+                CreatedAt = createdAt
+            };
+
+            return View(learningSession);
         }
 
         [HttpPost("upload")]
@@ -91,9 +91,10 @@ namespace StudentAssistPlatform.Controllers
                 var transcription = await _transcriptionService.TranscribeAudioAsync(audioBytes, fileName, contentType);
 
 
+        
                 return Ok(new
                 {
-                    message = "Voice recording uploaded successfully",
+                    transcription = transcription,
                     submissionId = submission.StudentId
                 });
             }
@@ -113,8 +114,13 @@ namespace StudentAssistPlatform.Controllers
 
             GradingResult result = await GradeExplanation(session);
 
-            return View();
 
+            return Ok(new {
+                score = result.Score,
+                feedback = result.Feedback,
+                improvementAreas = result.ImprovementAreas,
+                strengthAreas = result.StrengthAreas
+                });
 
         }
 
@@ -129,9 +135,6 @@ namespace StudentAssistPlatform.Controllers
             A student is learning about {session.Topic}. 
             Here is their explanation of the concept:
             {session.StudentExplanation}
-            
-            Context provided by the student:
-            {session.LearningContext}
             
             Please evaluate their understanding and provide:
             1. A score out of 100
