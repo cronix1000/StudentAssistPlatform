@@ -1,0 +1,50 @@
+﻿@model StudentAssistPlatform.Controllers.CalenderController.ScheduleFormModel
+@{
+    ViewData["Title"] = "Generate Study Schedule";
+}
+
+<div class="container mt-5">
+    <h1 class="text-center">Study Schedule Generator</h1>
+    <hr />
+
+    @if (!string.IsNullOrEmpty(ViewBag.SuccessMessage))
+    {
+        <div class="alert alert-success">
+            @ViewBag.SuccessMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(ViewBag.ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            @ViewBag.ErrorMessage
+        </div>
+    }
+
+    <form asp-action="Generate" asp-controller="Calander" method="post">
+        <div class="mb-3">
+            <label for="subject" class="form-label">Subject</label>
+            <input type="text" class="form-control" id="subject" name="Subject" value="@Model.Subject" required />
+        </div>
+        <div class="mb-3">
+            <label for="struggles" class="form-label">Struggles</label>
+            <textarea class="form-control" id="struggles" name="Struggles" rows="3" required>@Model.Struggles</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="timeline" class="form-label">Timeline (in Days)</label>
+            <input type="number" class="form-control" id="timeline" name="TimelineInDays" value="@Model.TimelineInDays" required />
+        </div>
+        <button type="submit" class="btn btn-primary">Generate Schedule</button>
+    </form>
+
+    @if (ViewBag.Tasks != null)
+    {
+        <h3 class="mt-5">Generated Schedule:</h3>
+        <ul class="list-group">
+            @foreach (var task in ViewBag.Tasks)
+            {
+                <li class="list-group-item">@task.Title</li>
+            }
+        </ul>
+    }
+</div>

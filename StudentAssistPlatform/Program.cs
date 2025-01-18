@@ -1,3 +1,8 @@
+using Google.Apis.Auth.OAuth2.Flows;
+using Google.Apis.Auth.OAuth2.Responses;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Calendar.v3;
+using Google.Apis.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StudentAssistPlatform.Data;
@@ -15,7 +20,24 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.Requ
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient();
+//builder.Services.AddSingleton(provider =>
+//{
+//    var clientId = builder.Configuration["Google:ClientId"];
+//    var clientSecret = builder.Configuration["Google:ClientSecret"];
 
+//    if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+//    {
+//        throw new Exception("Google API credentials are missing in User Secrets.");
+//    }
+
+    
+
+//    return new CalendarService(new BaseClientService.Initializer
+//    {
+//        HttpClientInitializer = credential,
+//        ApplicationName = "YourAppName"
+//    });
+//});
 builder.Services.AddScoped<ITranscriptionService, TranscriptionService>();
 
 var app = builder.Build();
