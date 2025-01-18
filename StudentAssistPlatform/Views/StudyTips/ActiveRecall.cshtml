@@ -152,185 +152,217 @@
         color: #666;
     }
 </style>
-    <div class="practice-container">
-        <!-- Recording Section -->
-        <div class="recorder-section">
-            <h3>Speech Recording</h3>
-            <div class="status-indicator">
-                <span class="status-dot"></span>
-                Ready to record
-            </div>
-            <button class="record-button">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="6"></circle>
-                </svg>
-            </button>
-            <div class="timer">00:00</div>
-            <div class="transcript-area">
-                <p>Your speech will be transcribed here in real-time...</p>
-            </div>
-            <div class="metrics">
-                <div class="metric-card">
-                    <div class="metric-value">120</div>
-                    <div class="metric-label">Words/min</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">2:30</div>
-                    <div class="metric-label">Duration</div>
-                </div>
-            </div>
+<div class="practice-container">
+    <!-- Recording Section -->
+    <div class="recorder-section">
+        <h3>Speech Recording</h3>
+        <div class="status-indicator">
+            <span class="status-dot"></span>
+            Ready to record
         </div>
+        <button class="record-button" id="recordButton">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="6"></circle>
+            </svg>
+        </button>
+        <div class="status-indicator"></div>
+        <audio id="audioPlay" controls></audio>
 
-        <!-- Feedback Section -->
-        <div class="feedback-section">
-            <h2>AI Tutor Feedback</h2>
-            <div class="tutor-message">
-                <div class="tutor-avatar">
-                    <img src="/api/placeholder/40/40" alt="AI Tutor" />
-                </div>
-                <div class="message-content">
-                    <p>I'll analyze your presentation in real-time and provide feedback on:</p>
-                    <ul>
-                        <li>Speaking pace and clarity</li>
-                        <li>Voice modulation</li>
-                        <li>Content structure</li>
-                        <li>Key points coverage</li>
-                        <li>Engagement level</li>
-                    </ul>
-                    <p>Click the record button when you're ready to start your presentation.</p>
-                </div>
+        <div class="timer">00:00</div>
+        <div class="transcript-area">
+            <p>Your speech will be transcribed here in real-time...</p>
+        </div>
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="metric-value">120</div>
+                <div class="metric-label">Words/min</div>
             </div>
-            <div class="tutor-message">
-                <div class="tutor-avatar">
-                    <img src="/api/placeholder/40/40" alt="AI Tutor" />
-                </div>
-                <div class="message-content">
-                    <p>Real-time feedback will appear here as you speak...</p>
-                </div>
+            <div class="metric-card">
+                <div class="metric-value">2:30</div>
+                <div class="metric-label">Duration</div>
             </div>
         </div>
     </div>
 
-    @section Scripts {
-        <script>
-            // Basic recording button toggle
-            const recordButton = document.querySelector('.record-button');
-            let isRecording = false;
+    <!-- Feedback Section -->
+    <div class="feedback-section">
+        <h2>AI Tutor Feedback</h2>
+        <div class="tutor-message">
+            <div class="tutor-avatar">
+                <img src="/api/placeholder/40/40" alt="AI Tutor" />
+            </div>
+            <div class="message-content">
+                <p>I'll analyze your presentation in real-time and provide feedback on:</p>
+                <ul>
+                    <li>Speaking pace and clarity</li>
+                    <li>Voice modulation</li>
+                    <li>Content structure</li>
+                    <li>Key points coverage</li>
+                    <li>Engagement level</li>
+                </ul>
+                <p>Click the record button when you're ready to start your presentation.</p>
+            </div>
+        </div>
+        <div class="tutor-message">
+            <div class="tutor-avatar">
+                <img src="/api/placeholder/40/40" alt="AI Tutor" />
+            </div>
+            <div class="message-content">
+                <p>Real-time feedback will appear here as you speak...</p>
+            </div>
+        </div>
+    </div>
+</div>
 
-            recordButton.addEventListener('click', () => {
-                isRecording = !isRecording;
-                recordButton.classList.toggle('recording');
-                const statusIndicator = document.querySelector('.status-indicator');
+@section Scripts {
+    <script>
+
+        let isRecording = false
+
+        const audioIN = {
+            audio: true
+        };
+
+        // Initialize array to store audio data
+        let dataArray = [];
+        let mediaRecorder;
+
+        const recordButton = document.querySelector('#recordButton'); // Make sure this matches your button's ID
+
+        function uploadVoiceRecording(audioBlob) {
+            // Convert blob to base64
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+
+            reader.onloadend = function () {
+                // Remove the data URL prefix to get just the base64 string
+                const base64Audio = reader.result.split(',')[1];
+
+                const voiceData = {
+                    studentId: "current-student-id", // Replace with actual student ID
+                    topic: "current-topic", // Replace with actual topic
+                    audioBase64: base64Audio
+                };
+
+                // Send to server
+                fetch('/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // Add any authentication headers if needed
+                        // 'Authorization': 'Bearer your-token'
+                    },
+                    body: JSON.stringify(voiceData)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Success:', data);
+                        // Handle successful upload
+                        showSuccessMessage('Recording uploaded successfully!');
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // Handle errors
+                        showErrorMessage('Failed to upload recording. Please try again.');
+                    });
+            };
+        }
+
+        // Helper functions for UI feedback
+        function showSuccessMessage(message) {
+            const statusIndicator = document.querySelector('.status-indicator');
+            if (statusIndicator) {
                 statusIndicator.innerHTML = `
-                                                    <span class="status-dot" style="background: ${isRecording ? '#dc2626' : '#22c55e'}"></span>
-                                                    ${isRecording ? 'Recording...' : 'Ready to record'}
-                                                `;
-                if (isRecording) {
-                    startRecording();
-                } else {
-                    stopRecording();
-                }
+                            <div class="success-message">
+                                <span class="status-dot" style="background: #22c55e"></span>
+                                ${message}
+                            </div>
+                        `;
+            }
+        }
 
-                // Simulate recording
+        function showErrorMessage(message) {
+            const statusIndicator = document.querySelector('.status-indicator');
+            if (statusIndicator) {
+                statusIndicator.innerHTML = `
+                            <div class="error-message">
+                                <span class="status-dot" style="background: #dc2626"></span>
+                                ${message}
+                            </div>
+                        `;
+            }
+        }
 
-            });
+        recordButton.addEventListener('click', () => {
+            isRecording = !isRecording;
+            recordButton.classList.toggle('recording');
 
-            startRecording()
-            {
-                navigator.mediaDevices.getUserMedia(audioIN)
+            const statusIndicator = document.querySelector('.status-indicator');
+            statusIndicator.innerHTML = `
+                        <span class="status-dot" style="background: ${isRecording ? '#dc2626' : '#22c55e'}"></span>
+                        ${isRecording ? 'Recording...' : 'Ready to record'}
+                    `;
 
-                    // 'then()' method returns a Promise
-                    .then(function (mediaStreamObj) {
+            if (isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        });
 
-                        // Connect the media stream to the
-                        // first audio element
-                        let audio = document.querySelector('audio');
-                        //returns the recorded audio via 'audio' tag
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia(audioIN)
+                .then(function (mediaStreamObj) {
+                    let audio = document.querySelector('audio');
 
-                        // 'srcObject' is a property which
-                        // takes the media object
-                        // This is supported in the newer browsers
-                        if ("srcObject" in audio) {
-                            audio.srcObject = mediaStreamObj;
-                        }
-                        else {   // Old version
-                            audio.src = window.URL
-                                .createObjectURL(mediaStreamObj);
-                        }
-
-                        // It will play the audio
-                        audio.onloadedmetadata = function (ev) {
-
-                            // Play the audio in the 2nd audio
-                            // element what is being recorded
-                            audio.play();
-                        };
-
-                        // Start record
-                        let start = document.getElementById('btnStart');
-
-                        // Stop record
-                        let stop = document.getElementById('btnStop');
-
-                        // 2nd audio tag for play the audio
-                        let playAudio = document.getElementById('adioPlay');
-
-                        // This is the main thing to recorded
-                        // the audio 'MediaRecorder' API
-                        let mediaRecorder = new MediaRecorder(mediaStreamObj);
-                        // Pass the audio stream
-
-                        // Start event
-                        start.addEventListener('click', function (ev) {
-                            mediaRecorder.start();
-                            // console.log(mediaRecorder.state);
-                        })
-
-                        // Stop event
-                        stop.addEventListener('click', function (ev) {
-                            mediaRecorder.stop();
-                            // console.log(mediaRecorder.state);
-                        });
-
-                        // If audio data available then push
-                        // it to the chunk array
-                        mediaRecorder.ondataavailable = function (ev) {
-                            dataArray.push(ev.data);
-                        }
-
-                        // Chunk array to store the audio data
-                        let dataArray = [];
-
-                        // Convert the audio data in to blob
-                        // after stopping the recording
-                        mediaRecorder.onstop = function (ev) {
-
-                            // blob of type mp3
-                            let audioData = new Blob(dataArray,
-                                { 'type': 'audio/mp3;' });
-
-                            // After fill up the chunk
-                            // array make it empty
-                            dataArray = [];
-
-                            // Creating audio url with reference
-                            // of created blob named 'audioData'
-                            let audioSrc = window.URL
-                                .createObjectURL(audioData);
-
-                            // Pass the audio url to the 2nd video tag
-                            playAudio.src = audioSrc;
-
-                            console.log(audioSrc)
-                        }
+                    if ("srcObject" in audio) {
+                        audio.srcObject = mediaStreamObj;
+                    } else {
+                        audio.src = window.URL.createObjectURL(mediaStreamObj);
                     }
 
-                    )
-                    // If any error occurs then handles the error
-                    .catch(function (err) {
-                        console.log(err.name, err.message);
-                    });
+                    audio.onloadedmetadata = function (ev) {
+                        audio.play();
+                    };
 
+                    mediaRecorder = new MediaRecorder(mediaStreamObj);
+                    mediaRecorder.start();
+
+                    mediaRecorder.ondataavailable = function (ev) {
+                        dataArray.push(ev.data);
+                    }
+                })
+                .catch(function (err) {
+                    console.error('Error accessing media devices:', err);
+                });
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+
+                // Process the recorded audio
+                mediaRecorder.onstop = function () {
+                    const audioBlob = new Blob(dataArray, { 'type': 'audio/mp3' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+
+                    // If you want to play back the recorded audio
+                    const playAudio = document.getElementById('audioPlay');
+                    if (playAudio) {
+                        playAudio.src = audioUrl;
+                    }
+
+                    uploadVoiceRecording(audioBlob);
+
+                    // Clear the data array for next recording
+                    dataArray = [];
+                };
             }
-        </script>
-    }
+        }
+    </script>
+}

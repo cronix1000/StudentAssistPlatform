@@ -31,11 +31,47 @@ namespace StudentAssistPlatform.Controllers
             public List<string> StrengthAreas { get; set; }
         }
 
+        public class VoiceSubmission
+        {
+            public string StudentId { get; set; }
+            public string Topic { get; set; }
+            public string AudioBase64 { get; set; }
+            public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
+        }
+
+
+
 
         public IActionResult ActiveRecall()
         {
             return View();
         }
+
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadVoice([FromBody] VoiceSubmission submission)
+        {
+            try
+            {
+                //// Save to database
+                //_context.Add(submission);
+                //await _context.SaveChangesAsync();
+
+                // Here you would process the audio file
+                // For example, send it to speech-to-text service
+
+                return Ok(new
+                {
+                    message = "Voice recording uploaded successfully",
+                    submissionId = submission.StudentId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Error processing voice submission");
+            }
+        }
+
+
 
         [HttpPost]
         public async Task<IActionResult> SubmitExplanation(LearningSession session)
@@ -53,7 +89,9 @@ namespace StudentAssistPlatform.Controllers
 
         public async Task<GradingResult> GradeExplanation(LearningSession session)
         {
-            // Here you would integrate with an AI service (e.g., Claude API)
+            // Here you would integrate with an AI service (e.g., Cl
+            //
+            // e API)
             // Example prompt structure:
             string prompt = $@"You are an expert teacher in {session.Subject}. 
             A student is learning about {session.Topic}. 
