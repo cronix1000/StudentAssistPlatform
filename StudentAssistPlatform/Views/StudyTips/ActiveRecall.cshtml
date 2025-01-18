@@ -217,96 +217,25 @@
 @section Scripts {
     <script>
 
-        let isRecording = false
+        let isRecording = false;
+        let mediaRecorder;
+        let recordedChunks = [];
 
-        const audioIN = {
+        // Audio constraints
+        const audioConstraints = {
             audio: true
         };
 
-        // Initialize array to store audio data
-        let dataArray = [];
-        let mediaRecorder;
+        const recordButton = document.querySelector('#recordButton');
+        const statusIndicator = document.querySelector('.status-indicator');
+        const audioPlayer = document.getElementById('audioPlay');
 
-        const recordButton = document.querySelector('#recordButton'); // Make sure this matches your button's ID
-
-        function uploadVoiceRecording(audioBlob) {
-            // Convert blob to base64
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-
-            reader.onloadend = function () {
-                // Remove the data URL prefix to get just the base64 string
-                const base64Audio = reader.result.split(',')[1];
-
-                const voiceData = {
-                    studentId: "current-student-id", // Replace with actual student ID
-                    topic: "current-topic", // Replace with actual topic
-                    audioBase64: base64Audio
-                };
-
-                // Send to server
-                fetch('/upload', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        // Add any authentication headers if needed
-                        // 'Authorization': 'Bearer your-token'
-                    },
-                    body: JSON.stringify(voiceData)
-                })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log('Success:', data);
-                        // Handle successful upload
-                        showSuccessMessage('Recording uploaded successfully!');
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        // Handle errors
-                        showErrorMessage('Failed to upload recording. Please try again.');
-                    });
-            };
-        }
-
-        // Helper functions for UI feedback
-        function showSuccessMessage(message) {
-            const statusIndicator = document.querySelector('.status-indicator');
-            if (statusIndicator) {
-                statusIndicator.innerHTML = `
-                            <div class="success-message">
-                                <span class="status-dot" style="background: #22c55e"></span>
-                                ${message}
-                            </div>
-                        `;
-            }
-        }
-
-        function showErrorMessage(message) {
-            const statusIndicator = document.querySelector('.status-indicator');
-            if (statusIndicator) {
-                statusIndicator.innerHTML = `
-                            <div class="error-message">
-                                <span class="status-dot" style="background: #dc2626"></span>
-                                ${message}
-                            </div>
-                        `;
-            }
-        }
-
+        // Attach event listener to the record button
         recordButton.addEventListener('click', () => {
             isRecording = !isRecording;
             recordButton.classList.toggle('recording');
 
-            const statusIndicator = document.querySelector('.status-indicator');
-            statusIndicator.innerHTML = `
-                        <span class="status-dot" style="background: ${isRecording ? '#dc2626' : '#22c55e'}"></span>
-                        ${isRecording ? 'Recording...' : 'Ready to record'}
-                    `;
+            updateStatus(isRecording ? 'Recording...' : 'Ready to record', isRecording ? '#dc2626' : '#22c55e');
 
             if (isRecording) {
                 startRecording();
@@ -316,53 +245,115 @@
         });
 
         function startRecording() {
-            navigator.mediaDevices.getUserMedia(audioIN)
-                .then(function (mediaStreamObj) {
-                    let audio = document.querySelector('audio');
-
-                    if ("srcObject" in audio) {
-                        audio.srcObject = mediaStreamObj;
+            navigator.mediaDevices.getUserMedia(audioConstraints)
+                .then((stream) => {
+                    // Display audio playback
+                    if ("srcObject" in audioPlayer) {
+                        audioPlayer.srcObject = stream;
                     } else {
-                        audio.src = window.URL.createObjectURL(mediaStreamObj);
+                        audioPlayer.src = window.URL.createObjectURL(stream);
                     }
 
-                    audio.onloadedmetadata = function (ev) {
-                        audio.play();
+                    audioPlayer.onloadedmetadata = () => {
+                        audioPlayer.play();
                     };
 
-                    mediaRecorder = new MediaRecorder(mediaStreamObj);
-                    mediaRecorder.start();
+                    // Initialize MediaRecorder
+                    mediaRecorder = new MediaRecorder(stream);
+                    recordedChunks = [];
 
-                    mediaRecorder.ondataavailable = function (ev) {
-                        dataArray.push(ev.data);
-                    }
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            recordedChunks.push(event.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        audioPlayer.src = audioUrl;
+
+                        // Upload the recorded audio
+                        uploadVoiceRecording(audioBlob);
+                    };
+
+                    mediaRecorder.start();
                 })
-                .catch(function (err) {
-                    console.error('Error accessing media devices:', err);
+                .catch((error) => {
+                    console.error('Error accessing audio devices:', error);
+                    updateStatus('Failed to access microphone', '#dc2626');
                 });
         }
 
         function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
                 mediaRecorder.stop();
 
-                // Process the recorded audio
-                mediaRecorder.onstop = function () {
-                    const audioBlob = new Blob(dataArray, { 'type': 'audio/mp3' });
-                    const audioUrl = URL.createObjectURL(audioBlob);
-
-                    // If you want to play back the recorded audio
-                    const playAudio = document.getElementById('audioPlay');
-                    if (playAudio) {
-                        playAudio.src = audioUrl;
-                    }
-
-                    uploadVoiceRecording(audioBlob);
-
-                    // Clear the data array for next recording
-                    dataArray = [];
-                };
+                // Stop the microphone stream
+                const tracks = audioPlayer.srcObject?.getTracks();
+                if (tracks) {
+                    tracks.forEach((track) => track.stop());
+                }
             }
         }
+
+        // Helper function to update the status indicator
+        function updateStatus(message, color) {
+            if (statusIndicator) {
+                statusIndicator.innerHTML = `
+                                    <span class="status-dot" style="background: ${color}"></span>
+                                    ${message}
+                                `;
+            }
+        }
+
+        // Upload the recorded audio to the server
+        function uploadVoiceRecording(audioBlob) {
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+
+            reader.onloadend = () => {
+                const base64Audio = reader.result.split(',')[1];
+
+                const voiceData = {
+                    studentId: "current-student-id", // Replace with actual student ID
+                    topic: "current-topic", // Replace with actual topic
+                    audioBase64: base64Audio
+                };
+
+                fetch('/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(voiceData)
+                })
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then((data) => {
+                        console.log('Success:', data);
+                        showSuccessMessage('Recording uploaded successfully!');
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                        showErrorMessage('Failed to upload recording. Please try again.');
+                    });
+            };
+        }
+
+        // Helper function to show success message
+        function showSuccessMessage(message) {
+            updateStatus(message, '#22c55e');
+        }
+
+        // Helper function to show error message
+        function showErrorMessage(message) {
+            updateStatus(message, '#dc2626');
+        }
+               
     </script>
 }

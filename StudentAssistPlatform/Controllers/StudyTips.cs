@@ -5,6 +5,13 @@ namespace StudentAssistPlatform.Controllers
 {
     public class StudyTips : Controller
     {
+        private readonly ITranscriptionService _transcriptionService;
+
+        public StudyTips(ITranscriptionService transcriptionService)
+        {
+            _transcriptionService = transcriptionService;
+        }
+
         public IActionResult Index()
         {
             return View();
@@ -58,6 +65,31 @@ namespace StudentAssistPlatform.Controllers
 
                 // Here you would process the audio file
                 // For example, send it to speech-to-text service
+
+                var base64String = submission.AudioBase64;
+                if (base64String.Contains(","))
+                {
+                    base64String = base64String.Substring(base64String.IndexOf(",") + 1);
+                }
+
+                // 2. Convert base64 to byte array
+                byte[] audioBytes;
+                try
+                {
+                    audioBytes = Convert.FromBase64String(base64String);
+                }
+                catch
+                {
+                    return BadRequest("AudioBase64 is not valid base64.");
+                }
+
+                // 3. Call the transcription service
+                //    Adjust fileName and contentType to match your actual data
+                string fileName = submission.Topic + ".wav";
+                string contentType = "audio/wav"; // or "audio/mpeg" or "audio/mp4", etc.
+
+                var transcription = await _transcriptionService.TranscribeAudioAsync(audioBytes, fileName, contentType);
+
 
                 return Ok(new
                 {
