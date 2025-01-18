@@ -1,6 +1,7 @@
-﻿@{
-    ViewData["Title"] = "Index";
+@{
+    ViewData["Title"] = "SignUp";
 }
+
 <style>
     :root {
         --primary-blue: #1a237e;
@@ -15,7 +16,7 @@
         justify-content: center;
         align-items: center;
         min-height: 100vh;
-        background-color: #f9f9f9;
+        background-color: #FFF8E2;
     }
 
     .container {
@@ -34,7 +35,6 @@
     h3 {
         font-size: 2rem;
         font-weight: bold;
-        margin-top: 8.5rem;
         margin-bottom: 2.5rem;
     }
 
@@ -46,12 +46,8 @@
         border-radius: 10px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         padding: 2rem;
-        width: 300px;
+        width: 400px;
         margin: 0 auto;
-    }
-
-    label {
-        font-size: 0;
     }
 
     input {
@@ -83,24 +79,43 @@
     button:hover {
         background-color: #6c1bb5;
     }
+
+    form ul li {
+        font-size: x-small;
+        list-style: disc inside;
+        text-align: left;
+    }
+
+    label {
+        display: block;
+        color: black;
+        font-size: small;
+    }
 </style>
 
 <div class="container">
-    <h3>Enter Details</h3>
-    <form action="/Home/SignUp" method="POST">
+    <h3>Hello @ViewBag.Name</h3>
+    <h4>Specific help Request</h4>
+    <form action="/Home/Submitted" method="POST" enctype="multipart/form-data">
 
-        <label for="name">Name:</label>
-        <input type="text" id="name" name="name" placeholder="Name" required />
+        <label for="helpfor">What do you need help studying for?</label>
+        <input type="text" id="helpfor" name="helpfor" placeholder="Type here" required />
+        <ul>
+            <li>Exam / Test</li>
+            <li>Entire Course</li>
+            <li>Learning Specific material</li>
+        </ul>
+        <label for="weeks">How many weeks are you into the course</label>
+        <input type="number" id="weeks" name="weeks" placeholder="Type here" required />
 
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" placeholder="Email" required />
+        <label for="subject">Subject</label>
+        <input type="text" id="subject" name="subject" placeholder="Type here" required />
 
-        <label for="year">Year:</label>
-        <input type="text" id="year" name="year" placeholder="Year" required />
+        <label for="timeleft">How soon is you exam?</label>
+        <input type="number" id="timeleft" name="timeleft" placeholder="Type Here" required />
 
-        <label for="gpa">Current GPA:</label>
-        <input type="number" id="gpa" name="gpa" placeholder="GPA" required />
+        <label for="file">Upload relevant material</label>
+        <input type="file" id="file" name="file" required />
 
         <button type="submit">Sign Up</button>
     </form>
-</div>

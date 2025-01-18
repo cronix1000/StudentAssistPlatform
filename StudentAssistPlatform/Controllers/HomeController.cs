@@ -15,7 +15,7 @@ namespace StudentAssistPlatform.Controllers
 
         public IActionResult Index()
         {
-            return RedirectToAction("Dashboard");
+            return View();
         }
 
         public IActionResult Dashboard()
@@ -25,6 +25,17 @@ namespace StudentAssistPlatform.Controllers
 
         public IActionResult Privacy()
         {
+            return View();
+        }
+        [HttpPost]
+        public IActionResult SignUp(string name, string email, string year, double gpa)
+        {
+            // Add the user to the database
+            ViewBag.Name = name.ToUpper();
+            ViewBag.Email = email;
+            ViewBag.Year = year;
+            ViewBag.Gpa = gpa;
+
             return View();
         }
 
