@@ -31,14 +31,14 @@
         <h3 class="mb-3 text-success">Study Resources</h3>
         @if (ViewBag.Resources != null)
         { 
-        <ol class="list-group">
-
-            @foreach (var resource in ViewBag.Resources)
-            {
-               <li class="list-group-item border-0">@resource</li>
-            }
+            <ol class="list-group">
+                @foreach (var resource in ViewBag.Resources)
+                {
+                    <li class="list-group-item border-0">@resource</li>
+                    
+                }
         </ol>
-         }
+        }
          else {
                 <p class="text-muted">No resources available.</p>
             }
