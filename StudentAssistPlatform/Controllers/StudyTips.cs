@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OpenAI_API.Completions;
 using StudentAssistPlatform.Models;
+using System.Text.Json;
 
 namespace StudentAssistPlatform.Controllers
 {
@@ -8,9 +10,15 @@ namespace StudentAssistPlatform.Controllers
     {
         private readonly ITranscriptionService _transcriptionService;
 
-        public StudyTips(ITranscriptionService transcriptionService)
+        //private readonly CalendarService _googleCalendarService;
+        private readonly string _openAIApiKey;
+
+
+        public StudyTips(ITranscriptionService transcriptionService, IConfiguration configuration)
         {
             _transcriptionService = transcriptionService;
+            //_googleCalendarService = googleCalendarService;
+            _openAIApiKey = configuration["OpenAI:ApiKey"];
         }
 
         public IActionResult Index()
@@ -105,8 +113,8 @@ namespace StudentAssistPlatform.Controllers
 
 
 
-        [HttpPost("feedback")]
-        public async Task<IActionResult> GiveFeedback(LearningSession session)
+        [HttpPost]
+        public async Task<IActionResult> GiveFeedback([FromBody] LearningSession session)
         {
             if (!ModelState.IsValid)
                 return View("StartSession", session);
@@ -126,30 +134,48 @@ namespace StudentAssistPlatform.Controllers
 
         public async Task<GradingResult> GradeExplanation(LearningSession session)
         {
-            // Here you would integrate with an AI service (e.g., Cl
-            //
-            // e API)
-            // Example prompt structure:
-            string prompt = $@"You are an expert teacher in {session.Subject}. 
-            A student is learning about {session.Topic}. 
-            Here is their explanation of the concept:
-            {session.StudentExplanation}
-            
-            Please evaluate their understanding and provide:
-            1. A score out of 100
-            2. Constructive feedback
-            3. Areas for improvement
-            4. Areas of strength";
 
-            // AI service call would go here
-            // For now, returning mock data
-            return new GradingResult
+            var openAi = new OpenAI_API.OpenAIAPI(_openAIApiKey);
+
+            string prompt = $@"You are an expert teacher in {session.Subject}. 
+A student is learning about {session.Topic}. 
+Here is their explanation of the concept:
+{session.StudentExplanation}
+
+Please evaluate their understanding and provide only a JSON object with the following fields:
+{{
+  ""Score"": <score out of 100>,
+  ""Feedback"": ""constructive feedback"",
+  ""ImprovementAreas"": [""list"", ""of"", ""areas"", ""for"", ""improvement""],
+  ""StrengthAreas"": [""list"", ""of"", ""strengths""]
+}}
+
+";
+
+            // Call OpenAI's API
+            var completion = await openAi.Completions.CreateCompletionAsync(new CompletionRequest()
             {
-                Score = 85,
-                Feedback = "Good explanation with clear understanding of core concepts...",
-                ImprovementAreas = new List<string> { "Consider adding more examples" },
-                StrengthAreas = new List<string> { "Clear articulation of main ideas" }
-            };
+                Prompt = prompt,
+                MaxTokens = 2000,
+                Temperature = 0.7
+            });
+
+            // Assuming the response returns a JSON string that matches our GradingResult structure
+            string jsonResponse = completion.Completions[0].Text.Trim();
+
+            // Deserialize the JSON response into a GradingResult object
+            GradingResult result;
+            try
+            {
+                result = JsonSerializer.Deserialize<GradingResult>(jsonResponse);
+            }
+            catch (JsonException ex)
+            {
+                // Handle JSON parsing errors
+                throw new Exception("Failed to parse the AI response into a GradingResult.", ex);
+            }
+
+            return result;
         }
     }
 }

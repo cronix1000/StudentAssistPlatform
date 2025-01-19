@@ -149,6 +149,7 @@
         <div class="status-indicator">
             <span class="status-dot" style="background: #22c55e;"></span>
             Ready to record
+
         </div>
         <button class="record-button" id="recordButton">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -156,6 +157,7 @@
             </svg>
         </button>
         <audio id="audioPlay" controls></audio>
+        <span id="timerDisplay">00:00</span>
         <div class="transcript-area">
             <p>Your speech will be transcribed here in real-time...</p>
         </div>
@@ -174,7 +176,26 @@
     <!-- Feedback Section -->
     <div class="feedback-section">
         <h2>AI Tutor Feedback</h2>
-        <div class="tutor-message">
+        <div id="gradingResult" style="display:none;">
+            <h3>Grading Summary</h3>
+            <div class="metric-card">
+                <div class="metric-label">Score</div>
+                <div class="metric-value" id="scoreValue"></div>
+            </div>
+            <div>
+                <h4>Feedback:</h4>
+                <p id="feedbackText"></p>
+            </div>
+            <div>
+                <h4>Areas for Improvement:</h4>
+                <ul id="improvementList"></ul>
+            </div>
+            <div>
+                <h4>Strength Areas:</h4>
+                <ul id="strengthList"></ul>
+            </div>
+        </div>
+        <div class="tutor-message" id="initialMessage">
             <div class="tutor-avatar"></div>
             <div class="message-content">
                 <p>I'll analyze your presentation in real-time and provide feedback on:</p>
@@ -189,6 +210,7 @@
             </div>
         </div>
     </div>
+
 </div>
 
 @section Scripts {
@@ -196,18 +218,26 @@
         let isRecording = false;
         let mediaRecorder;
         let recordedChunks = [];
+        let timerInterval;
+        let startTime;
 
         const audioConstraints = { audio: true };
         const recordButton = document.querySelector('#recordButton');
         const statusIndicator = document.querySelector('.status-indicator');
         const audioPlayer = document.getElementById('audioPlay');
+        const timerDisplay = document.getElementById('timerDisplay');
 
         recordButton.addEventListener('click', () => {
             isRecording = !isRecording;
             recordButton.classList.toggle('recording');
             updateStatus(isRecording ? 'Recording...' : 'Ready to record', isRecording ? '#dc2626' : '#22c55e');
-            if (isRecording) startRecording();
-            else stopRecording();
+            if (isRecording) {
+                startRecording();
+                startTimer();
+            } else {
+                stopRecording();
+                stopTimer();
+            }
         });
 
         function startRecording() {
@@ -223,11 +253,14 @@
         }
 
         function stopRecording() {
-            if (mediaRecorder.state === 'recording') mediaRecorder.stop();
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
         }
 
         function saveRecording() {
             const audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+            recordedChunks = []; // reset for next recording
             const reader = new FileReader();
             reader.readAsDataURL(audioBlob);
             reader.onloadend = () => {
@@ -244,7 +277,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(voiceData)
                 }).then(response => response.json())
-                  .then(data => displayFeedback(data));
+                    .then(data => displayFeedback(data));
             };
         }
 
@@ -252,25 +285,84 @@
             const transcriptArea = document.querySelector('.transcript-area');
             transcriptArea.innerHTML = `<h4>Transcription:</h4><p>${data.transcription}</p>`;
 
-            const voiceData = {
+            const session = {
                 Subject: "@Model.Subject",
                 Topic: "@Model.Topic",
                 StudentExplanation: data.transcription,
                 AIFeedback: "",
                 CreatedAt: new Date().toISOString(),
-                AudioBase64: reader.result.split(',')[1]
             };
 
-            fetch('/feedback', {
+            fetch('StudyTips/GiveFeedback', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(voiceData)
-            }).then(response => response.json())
-                .then(data => displayFeedback(data));
+                body: JSON.stringify(session)
+            })
+                .then(response => response.json())
+                .then(aiData => showAITutorFeedback(aiData))
+
+                .catch(err => console.error(err));
+        }
+
+        function showAITutorFeedback(aiResult) {
+            console.log(aiResult)
+
+            // Hide initial tutor message
+            document.getElementById('initialMessage').style.display = 'none';
+
+            // Display the grading result container
+            const gradingDiv = document.getElementById('gradingResult');
+            gradingDiv.style.display = 'block';
+
+            // Update score
+            document.getElementById('scoreValue').textContent = aiResult.Score;
+
+            // Update feedback text
+            document.getElementById('feedbackText').textContent = aiResult.Feedback;
+
+            // Update improvement areas list
+            const improvementList = document.getElementById('improvementList');
+            improvementList.innerHTML = ''; // clear previous entries
+            aiResult.improvementAreas.forEach(area => {
+                const li = document.createElement('li');
+                li.textContent = area;
+                improvementList.appendChild(li);
+            });
+
+            // Update strength areas list
+            const strengthList = document.getElementById('strengthList');
+            strengthList.innerHTML = ''; // clear previous entries
+            aiResult.strengthAreas.forEach(area => {
+                const li = document.createElement('li');
+                li.textContent = area;
+                strengthList.appendChild(li);
+            });
         }
 
         function updateStatus(message, color) {
-            statusIndicator.innerHTML = `<span class="status-dot" style="background: ${color};"></span> ${message}`;
+            statusIndicator.innerHTML = `<span class="status-dot" style="background: ${color};"></span> ${message} <span id="timerDisplay">${timerDisplay.textContent}</span>`;
+        }
+
+        // Timer functions
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsedTime = Date.now() - startTime;
+                timerDisplay.textContent = formatTime(elapsedTime);
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        function formatTime(milliseconds) {
+            const totalSeconds = Math.floor(milliseconds / 1000);
+            const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+            const seconds = String(totalSeconds % 60).padStart(2, '0');
+            return `${minutes}:${seconds}`;
         }
     </script>
+}
+
 }
