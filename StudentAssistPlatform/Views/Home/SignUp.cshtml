@@ -35,7 +35,12 @@
     h3 {
         font-size: 2rem;
         font-weight: bold;
-        margin-bottom: 2.5rem;
+        margin-bottom: 1rem;
+    }
+
+    h4 {
+        font-family: "Anonymous Pro";
+        font-size: 50px;
     }
 
     form {
@@ -50,20 +55,32 @@
         margin: 0 auto;
     }
 
-    input {
+    input, select {
         width: 100%;
         padding: 0.75rem;
         margin-bottom: 1rem;
         border: 1px solid #ccc;
         border-radius: 5px;
         font-size: 1rem;
+        background-color: #fdfdfd;
+        appearance: none; /* Removes the default browser styling */
+        /*background-image: linear-gradient(45deg, transparent 50%, #8a2be2 50%), linear-gradient(135deg, #8a2be2 50%, transparent 50%);*/
+        background-position: calc(100% - 1rem) calc(1rem), calc(100% - 1rem) calc(1rem);
+        background: #fdfdfd url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cpath fill='%238a2be2' d='M2 0L0 2h4z'/%3E%3C/svg%3E") no-repeat right 1rem center;
+        background-size: 5px 5px, 5px 5px;
+        background-repeat: no-repeat;
+        cursor: pointer;
     }
 
-    input:focus {
-        outline: none;
-        border-color: #8a2be2;
-        box-shadow: 0 0 5px rgba(138, 43, 226, 0.5);
-    }
+        select::-ms-expand {
+            display: none; /* Remove dropdown arrow for IE/Edge */
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #8a2be2;
+            box-shadow: 0 0 5px rgba(138, 43, 226, 0.5);
+        }
 
     button {
         background-color: #8a2be2;
@@ -76,9 +93,9 @@
         transition: background-color 0.3s;
     }
 
-    button:hover {
-        background-color: #6c1bb5;
-    }
+        button:hover {
+            background-color: #6c1bb5;
+        }
 
     form ul li {
         font-size: x-small;
@@ -91,31 +108,37 @@
         color: black;
         font-size: small;
     }
+
+    span {
+        color: purple;
+    }
+
+    .lab1 {
+        font-size: 20px;
+    }
 </style>
 
 <div class="container">
-    <h3>Hello @ViewBag.Name</h3>
-    <h4>Specific help Request</h4>
-    <form action="/Home/Submitted" method="POST" enctype="multipart/form-data">
+    <h3>Hello, <span>@ViewBag.Name</span></h3>
+    <h4>Specific Help Request</h4>
+    <form asp-controller="Calender" asp-action="Calender" method="POST" enctype="multipart/form-data">
 
-        <label for="helpfor">What do you need help studying for?</label>
-        <input type="text" id="helpfor" name="helpfor" placeholder="Type here" required />
-        <ul>
-            <li>Exam / Test</li>
-            <li>Entire Course</li>
-            <li>Learning Specific material</li>
-        </ul>
-        <label for="weeks">How many weeks are you into the course</label>
+        <label class="lab1" for="helpfor">What do you need help studying for?</label>
+        @*<input type="text" id="helpfor" name="helpfor" placeholder="Type here" required />*@
+        <select id="helpfor" name="helpfor" required>
+            <option value="Exam / Test">Exam / Test</option>
+            <option value="Entire Course">Entire Course</option>
+            <option value="Learning Specific Material">Learning Speciic Material</option>
+        </select>
+        <label class="lab1" for="weeks">How many weeks are you into the course</label>
         <input type="number" id="weeks" name="weeks" placeholder="Type here" required />
 
-        <label for="subject">Subject</label>
+        <label class="lab1" for="subject">Subject</label>
         <input type="text" id="subject" name="subject" placeholder="Type here" required />
 
-        <label for="timeleft">How soon is you exam?</label>
+        <label class="lab1" for="timeleft">In how many days will you have your exam?</label>
         <input type="number" id="timeleft" name="timeleft" placeholder="Type Here" required />
-
-        <label for="file">Upload relevant material</label>
-        <input type="file" id="file" name="file" required />
 
         <button type="submit">Sign Up</button>
     </form>
+</div>

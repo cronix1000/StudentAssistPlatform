@@ -4,32 +4,42 @@
 }
 
 <div class="container mt-5">
-    <h1>Resources for @Model.Topic</h1>
+    <!-- Timer Button -->
+    <div class="text-end">
+        <button class="btn btn-sm btn-danger px-4 py-2 mb-4" id="timer-button">
+            Time Remaining: <span id="timer">05:00</span>
+        </button>
+    </div>
+
+    <!-- Topic Header -->
+    <h1 class="mb-3 text-primary">Resources for @Model.Topic</h1>
     <p><strong>Subject:</strong> @Model.Subject</p>
     <p><strong>Created At:</strong> @Model.CreatedAt.ToString("f")</p>
 
-    <div class="resources-list">
-        <h3>Study Resources</h3>
-        <ul>
+    <!-- Resources List -->
+    <div class="resources-list mb-5">
+        <h3 class="mb-3 text-success">Study Resources</h3>
+        <ol class="list-group">
             @foreach (var resource in ViewBag.Resources)
             {
-                <li>@resource</li>
+                <li class="list-group-item border-0">@resource</li>
             }
-        </ul>
+        </ol>
     </div>
 
-    <div class="timer-container mt-4">
-        <h3>Time Remaining: <span id="timer">120:00</span></h3>
+    <!-- Active Recall Button -->
+    <div class="text-center">
+        <a asp-action="ActiveRecall" asp-controller="StudyTips" asp-route-topic="@Model.Topic" asp-route-subject="@Model.Subject" 
+           class="btn btn-lg btn-primary px-5 py-3 fw-bold shadow-lg">
+            Start Active Recall Practice
+        </a>
     </div>
 </div>
 
-
-<a asp-action="ActiveRecall" asp-controller="StudyTips" asp-route-topic="@Model.Topic" asp-route-subject="@Model.Subject">Active Recall   </a>
-
+<!-- Timer Script -->
 <script>
-    // Timer logic
     const redirectUrl = "/StudyTips/active-recall?Subject=@Model.Subject&Topic=@Model.Topic&StudentExplanation=&Score=0&AIFeedback=&CreatedAt=@Model.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")";
-    let timeRemaining = 120 * 60; // 5 minutes in seconds
+    let timeRemaining = 120 * 60; // 2 hours in seconds
 
     const timerElement = document.getElementById('timer');
     const interval = setInterval(() => {
