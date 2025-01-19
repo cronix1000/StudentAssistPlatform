@@ -39,18 +39,15 @@ namespace StudentAssistPlatform.Controllers
 
 
         [HttpGet("active-recall")]
-        public IActionResult ActiveRecall([FromQuery] string subject, [FromQuery] string topic, [FromQuery] string studentExplanation, [FromQuery] int score, [FromQuery] string aiFeedback, [FromQuery] DateTime createdAt)
+        public IActionResult ActiveRecall(string topic, string subject)
         {
-            var learningSession = new LearningSession
+            LearningSession learningSession = new()
             {
-                Subject = subject,
                 Topic = topic,
-                StudentExplanation = studentExplanation,
-                Score = score,
-                AIFeedback = aiFeedback,
-                CreatedAt = createdAt
-            };
+                Subject = subject
 
+            };
+            
             return View(learningSession);
         }
 
@@ -106,8 +103,10 @@ namespace StudentAssistPlatform.Controllers
 
 
 
-        [HttpPost]
-        public async Task<IActionResult> SubmitExplanation(LearningSession session)
+
+
+        [HttpPost("feedback")]
+        public async Task<IActionResult> GiveFeedback(LearningSession session)
         {
             if (!ModelState.IsValid)
                 return View("StartSession", session);

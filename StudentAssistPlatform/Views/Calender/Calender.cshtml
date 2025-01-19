@@ -11,9 +11,9 @@
         border: 1px solid #ddd;
         border-radius: 5px;
         padding: 10px;
-        height: auto;
-        overflow-y: auto;
         background-color: #f9f9f9;
+        min-height: 100px;
+        overflow-y: auto;
     }
 
         .calendar-day h5 {
@@ -23,10 +23,15 @@
 
     .task-link {
         display: block;
-        margin-bottom: 5px;
+        margin-top: 5px;
         font-size: 12px;
         color: #007bff;
+        text-decoration: none;
     }
+
+        .task-link:hover {
+            text-decoration: underline;
+        }
 </style>
 
 <div class="container mt-5">
@@ -37,54 +42,54 @@
 
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 
-    @section scripts{
+@section Scripts {
     <script>
-        // Inject tasks from the model into the JavaScript array
+        // Parse tasks from server-side model
         const tasks = @Html.Raw(Json.Serialize(Model));
 
         function initCalendar(month, year) {
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const firstDay = new Date(year, month, 1).getDay();
-
-                const calendar = $("#calendar");
+            const calendar = $("#calendar");
             calendar.empty();
 
-                // Add empty slots for days before the 1st
+            // Add empty slots for days before the first day of the month
             for (let i = 0; i < firstDay; i++) {
                 calendar.append('<div class="calendar-day"></div>');
+            }
+
+            // Add days with tasks
+            for (let day = 1; day <= daysInMonth; day++) {
+                // Format date to match model format (YYYY-MM-DD)
+                const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                const dayTask = tasks.find(task => task.date === date);  // Use correct property name "Date"
+
+                let dayHtml = `<div class="calendar-day">
+                                <h5>${day}</h5>`;
+
+
+                console.log(dayTask)
+
+
+                if (dayTask) {
+                    dayHtml += `
+                                <a href="/Calender/Resources?title=${dayTask.title}&description=${dayTask.description}&resources=${dayTask.resources}&recallPrompt=${dayTask.recallPrompt}"
+                   class="dayTask-link" target="_blank">
+                    ${dayTask.title}
+                </a>`;
                 }
 
-                // Populate the calendar days
-            for (let day = 1; day <= daysInMonth; day++) {
-                const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                const dayTasks = tasks.filter(task => task.date === date);
-
-                    let dayHtml = `<div class="calendar-day">
-                    <h5>${day}</h5>`;
-
-                    dayTasks.forEach(task => {
-                    dayHtml += `
-                        <strong>${task.title}</strong>
-                            <ul>
-                                ${task.resources.split('\n').map(r => `<li>${r}</li>`).join("")}
-                        </ul>
-                            <p><strong>Assessment Question:</strong> ${task.assessmentQuestion}</p>
-                        <p><strong>Recall Prompt:</strong> ${task.recallPrompt}</p>
-                    <a href="/Calender/resources?Subject=${encodeURIComponent(task.subject)}&Topic=${encodeURIComponent(task.topic)}&Resources=${encodeURIComponent(task.resources)}&CreatedAt=${encodeURIComponent(task.createdAt)}"
-       class="task-link" target="_blank">
-        View Resources and Start
-    </a>
-
-                    `;
-                });
+                
 
                 dayHtml += "</div>";
                 calendar.append(dayHtml);
             }
-            }
+        }
 
-            // Initialize calendar with the current month
-            const today = new Date();
-            initCalendar(today.getMonth(), today.getFullYear());
+        // Initialize the calendar with the current month
+        const today = new Date();
+        initCalendar(today.getMonth(), today.getFullYear());
     </script>
-    }
+}
+
+}

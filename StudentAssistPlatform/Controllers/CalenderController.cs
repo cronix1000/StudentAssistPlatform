@@ -6,6 +6,10 @@ using OpenAI_API;
 using OpenAI_API.Completions;
 using Newtonsoft.Json;
 using StudentAssistPlatform.Models;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Text.Encodings.Web;
+using System.Threading.Tasks;
 
 
 namespace StudentAssistPlatform.Controllers
@@ -41,12 +45,13 @@ namespace StudentAssistPlatform.Controllers
             try
             {
                 // Generate tasks using OpenAI
-                var tasks = await GenerateTasks(model.Subject, model.Struggles, model.TimelineInDays);
+                
+                //var tasks = await GenerateTasks(model.Subject, model.Struggles, model.TimelineInDays);
 
                 //// Add tasks to Google Calendar
                 //await AddTasksToGoogleCalendar(tasks);
 
-                return RedirectToAction("Calander", new { tasks = tasks });
+                return RedirectToAction("Calender");
             }
             catch (Exception ex)
             {
@@ -57,44 +62,97 @@ namespace StudentAssistPlatform.Controllers
         private async Task<List<CalenderTask>> GenerateTasks(string topic, string struggles, int timelineInDays)
         {
             var openAi = new OpenAI_API.OpenAIAPI(_openAIApiKey);
-
             var prompt = $@"
-You are an AI assistant. Generate a detailed daily learning flow for the topic '{topic}' considering these struggles: '{struggles}'.
-The plan should span {timelineInDays} days, and each day should include:
-- A title summarizing the task.
-- A list of 2-3 learning resources (like websites, videos, or books).
-- An assessment question to evaluate understanding.
-- A recall prompt asking the user to explain the topic as if you know nothing.
+You are an AI assistant. Generate a JSON array containing daily learning tasks for the topic '{topic}' considering these struggles: '{struggles}'. 
+Each object should include:
+- 'title': Task title
+- 'description': Brief description of the task
+- 'url': A link to the task details
+- 'resources': a string of resources broken by \n in the string, can be links or books
+- 'assessmentQuestion': A question for evaluating understanding
+- 'recallPrompt': A link to the recall page
 
-Include links for active recall as: '/StudyTips/active-recall?Topic={topic}'.
-Format the output as a JSON array:
+Ensure the output is a single JSON array (not nested) in this format:
 [
     {{
-        'date': 'YYYY-MM-DD',
-        'title': 'Task Title',
-        'resources': 'List of resources',
-        'assessmentQuestion': 'Question for assessment',
-        'recallPrompt': 'Recall prompt with links'
-    }},
-    ...
+        ""title"": ""Task Title"",
+        ""description"": ""Task Description"",
+        ""url"": ""/lessons/task"",
+        ""resources"" ""Resources"",
+        ""assessmentQuestion"": ""Question text"",
+        ""recallPrompt"": ""/StudyTips/active-recall?Topic={topic}""
+    }}
 ]";
-            var completion = await openAi.Completions.CreateCompletionAsync(prompt, max_tokens: 500, temperature: 0.7);
+
+            var completion = await openAi.Completions.CreateCompletionAsync(prompt, max_tokens: 2000, temperature: 0.7);
 
             var jsonResponse = completion.Completions[0].Text;
 
-            var tasks = JsonConvert.DeserializeObject<List<CalenderTask>>(jsonResponse);
+            if (!jsonResponse.StartsWith("["))
+                jsonResponse = "[" + jsonResponse;
+            if (!jsonResponse.EndsWith("]"))
+                jsonResponse = jsonResponse + "]";
 
-            return tasks ?? new List<CalenderTask>();
+            jsonResponse = CleanJsonResponse(jsonResponse);
+
+            try
+            {
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    ReadCommentHandling = JsonCommentHandling.Skip,
+                    AllowTrailingCommas = true,
+                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping // Handle special characters better
+
+                };
+
+                return System.Text.Json.JsonSerializer.Deserialize<List<CalenderTask>>(jsonResponse, options);
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                // Log the cleaned JSON for debugging
+                Console.WriteLine($"Cleaned JSON that failed to parse: {jsonResponse}");
+                throw new Exception($"Failed to parse OpenAI response: {ex.Message}\nJSON: {jsonResponse}");
+            }
         }
 
-        [HttpGet("resources")]
-        public IActionResult Resources([FromQuery] string subject, [FromQuery] string topic, [FromQuery] string resources, [FromQuery] DateTime createdAt)
+        private string CleanJsonResponse(string json)
+        {
+            // Remove any potential Unicode characters or invalid whitespace
+            json = Regex.Replace(json, @"[\u0000-\u001F]", "");
+
+            // Ensure the response is a proper array
+            json = json.Trim();
+            if (!json.StartsWith("["))
+                json = "[" + json;
+            if (!json.EndsWith("]"))
+                json = json + "]";
+
+            // Remove any trailing commas before closing brackets
+            json = Regex.Replace(json, @",(\s*[\}\]])", "$1");
+
+            // Handle apostrophes and quotes properly
+            json = Regex.Replace(json, @"(?<!\\)'", "\\'"); // Escape unescaped single quotes
+            json = json.Replace("\"", "\\\"").Replace("'", "\""); // Replace all quotes with escaped double quotes
+
+            // Remove any duplicate whitespace
+            json = Regex.Replace(json, @"\s+", " ");
+
+            // Additional cleaning for common issues
+            json = json.Replace("\\'", "'"); // Fix any over-escaped apostrophes
+            json = Regex.Replace(json, @"\\""([,\]}])", "\"$1"); // Fix escaped quotes before delimiters
+
+            return json;
+        }
+
+        [HttpGet]
+        public IActionResult Resources(string title,string description,  string resources)
         {
             var viewModel = new LearningSession
             {
-                Subject = subject,
-                Topic = topic,
-                CreatedAt = createdAt
+                Subject = description,
+                Topic = title,
+                CreatedAt = DateTime.Now
             };
 
             // Split resources into a list for display
@@ -104,109 +162,111 @@ Format the output as a JSON array:
 
 
 
-        public IActionResult Calander(List<CalenderTask> tasks)
+        //public IActionResult Calender(List<CalenderTask> tasks)
+        //{
+        //    return View(tasks);
+        //}
+
+        public IActionResult Calender()
         {
-            return View(tasks);
+
+            var tasks = new List<CalenderTask>() { 
+
+            // Mathematics Tasks
+            new CalenderTask
+            {
+                Title = "Introduction to Linear Algebra",
+                Description = "Learn the fundamentals of vectors, matrices, and linear transformations",
+                Resources = "1. MIT OpenCourseware Linear Algebra\n2. 3Blue1Brown Essence of Linear Algebra\n3. Linear Algebra and Its Applications by Gilbert Strang",
+                AssessmentQuestion = "Explain how matrix multiplication represents the composition of linear transformations",
+                RecallPrompt = "/StudyTips/active-recall?Topic=LinearAlgebra",
+                Date = "2025-01-20" // Assign specific date
+            },
+        new CalenderTask
+        {
+            Title = "Calculus: Limits and Continuity",
+            Description = "Master the concepts of limits and continuity as foundations for calculus",
+            Resources = "1. Khan Academy Calculus Course\n2. Paul's Online Math Notes\n3. Calculus: Early Transcendentals by James Stewart",
+            AssessmentQuestion = "What is the formal epsilon-delta definition of a limit, and how does it relate to continuity?",
+            RecallPrompt = "/StudyTips/active-recall?Topic=Calculus",
+            Date = "2025-01-21" // Assign specific date
+        },
+
+        // Physics Tasks
+        new CalenderTask
+        {
+            Title = "Classical Mechanics Foundations",
+            Description = "Study Newton's laws of motion and their applications",
+            Resources = "1. Feynman Lectures on Physics Vol 1\n2. HyperPhysics - Mechanics\n3. Physics for Scientists and Engineers by Serway",
+            AssessmentQuestion = "How do Newton's three laws of motion explain the motion of a satellite in orbit?",
+            RecallPrompt = "/StudyTips/active-recall?Topic=ClassicalMechanics",
+            Date = "2025-01-22" // Assign specific date
+        },
+        new CalenderTask
+        {
+            Title = "Quantum Mechanics Basics",
+            Description = "Explore wave-particle duality and the Schrödinger equation",
+            Resources = "1. Quantum Mechanics: The Theoretical Minimum by Leonard Susskind\n2. MIT OCW Quantum Physics I\n3. Quantum Mechanics by Claude Cohen-Tannoudji",
+            AssessmentQuestion = "Explain the double-slit experiment and its implications for quantum mechanics",
+            RecallPrompt = "/StudyTips/active-recall?Topic=QuantumMechanics",
+            Date = "2025-01-23" // Assign specific date
+        },
+
+        // Computer Science Tasks
+        new CalenderTask
+        {
+            Title = "Data Structures Implementation",
+            Description = "Learn to implement and use fundamental data structures",
+            Resources = "1. Introduction to Algorithms (CLRS)\n2. GeeksforGeeks Data Structures\n3. Coursera Algorithms Specialization",
+            AssessmentQuestion = "Compare and contrast the performance characteristics of different tree structures (BST, AVL, Red-Black)",
+            RecallPrompt = "/StudyTips/active-recall?Topic=DataStructures",
+            Date = "2025-01-24" // Assign specific date
+        },
+        new CalenderTask
+        {
+            Title = "Algorithm Analysis",
+            Description = "Master Big O notation and algorithm complexity analysis",
+            Resources = "1. Algorithm Design Manual by Skiena\n2. LeetCode Problems Collection\n3. MIT OCW Introduction to Algorithms",
+            AssessmentQuestion = "Analyze the time and space complexity of quicksort, including best and worst cases",
+            RecallPrompt = "/StudyTips/active-recall?Topic=Algorithms",
+            Date = "2025-01-25" // Assign specific date
+        },
+
+        // Biology Tasks
+        new CalenderTask
+        {
+            Title = "Cell Biology Fundamentals",
+            Description = "Study cell structure, function, and cellular processes",
+            Resources = "1. Essential Cell Biology by Alberts\n2. Khan Academy Cell Biology\n3. HHMI BioInteractive Resources",
+            AssessmentQuestion = "Describe the process of cellular respiration and its relationship with photosynthesis",
+            RecallPrompt = "/StudyTips/active-recall?Topic=CellBiology",
+            Date = "2025-01-26" // Assign specific date
+        },
+        new CalenderTask
+        {
+            Title = "Genetics and Inheritance",
+            Description = "Explore DNA structure, replication, and inheritance patterns",
+            Resources = "1. Genetics: A Conceptual Approach by Pierce\n2. Nature Education Genetics\n3. DNA Learning Center Resources",
+            AssessmentQuestion = "Explain how DNA mutations can lead to phenotypic changes and their evolutionary implications",
+            RecallPrompt = "/StudyTips/active-recall?Topic=Genetics",
+            Date = "2025-01-27" // Assign specific date
         }
 
-//        public IActionResult Calender()
-//        {
-//            var tasks = new List<CalenderTask>
-//{
-//    // Math-related tasks
-//    new CalenderTask
-//    {
-//        Title = "Understand Derivatives Basics",
-//        Description = "Learn the foundational concepts of derivatives in calculus.",
-//        Url = "/StudyTips/resources?Subject=Math&Topic=Derivatives",
-//        Resources = "1. https://www.khanacademy.org/math/calculus-1/derivatives\n2. 'Calculus Made Easy' by Silvanus P. Thompson\n3. YouTube: https://youtube.com/derivatives101",
-//        AssessmentQuestion = "What is the derivative of x^2, and how does it represent the slope of the curve?",
-//        RecallPrompt = "/StudyTips/active-recall?Subject=Math&Topic=Derivatives&StudentExplanation=&Score=0&AIFeedback=&CreatedAt=2025-01-20"
-//    },
-//    new CalenderTask
-//    {
-//        Title = "Learn Integration Techniques",
-//        Description = "Explore key integration techniques for solving calculus problems.",
-//        Url = "/StudyTips/resources?Subject=Math&Topic=Integration",
-//        Resources = "1. https://example.com/integration-techniques\n2. 'Advanced Calculus' by James Stewart\n3. YouTube: https://youtube.com/integration-techniques",
-//        AssessmentQuestion = "What is the integral of sin(x), and what method do you use to solve it?",
-//        RecallPrompt = "/StudyTips/active-recall?Subject=Math&Topic=Integration&StudentExplanation=&Score=0&AIFeedback=&CreatedAt=2025-01-21"
-//    },
+    };
+    return View(tasks);
+    }
 
-//    // Biology-related tasks
-//    new CalenderTask
-//    {
-//        Title = "Understand Photosynthesis",
-//        Description = "Learn the process of how plants convert sunlight into energy.",
-//        Url = "/StudyTips/resources?Subject=Biology&Topic=Photosynthesis",
-//        Resources = "1. https://www.khanacademy.org/science/photosynthesis\n2. 'Photosynthesis Explained' by Biology101\n3. YouTube: https://youtube.com/photosynthesis-basics",
-//        AssessmentQuestion = "What are the two stages of photosynthesis, and where do they occur in the cell?",
-//        RecallPrompt = "/StudyTips/active-recall?Subject=Biology&Topic=Photosynthesis&StudentExplanation=&Score=0&AIFeedback=&CreatedAt=2025-01-20"
-//    },
-//    new CalenderTask
-//    {
-//        Title = "Explore Cellular Respiration",
-//        Description = "Understand how cells convert glucose into ATP.",
-//        Url = "/StudyTips/resources?Subject=Biology&Topic=Cellular Respiration",
-//        Resources = "1. https://example.com/cellular-respiration\n2. 'Biology for Beginners' by Dr. Smith\n3. YouTube: https://youtube.com/cellular-respiration",
-//        AssessmentQuestion = "What are the three stages of cellular respiration, and what are their outputs?",
-//        RecallPrompt = "/StudyTips/active-recall?Subject=Biology&Topic=Cellular Respiration&StudentExplanation=&Score=0&AIFeedback=&CreatedAt=2025-01-21"
-//    },
 
-//    // History-related tasks
-//    new CalenderTask
-//    {
-//        Title = "Study the Causes of World War I",
-//        Description = "Analyze the key causes and events leading to World War I.",
-//        Url = "/StudyTips/resources?Subject=History&Topic=World War I",
-//        Resources = "1. https://history.com/ww1-causes\n2. 'The Great War' by John Keegan\n3. YouTube: https://youtube.com/world-war-1-causes",
-//        AssessmentQuestion = "What were the main causes of World War I, and how did alliances contribute to the conflict?",
-//        RecallPrompt = "/StudyTips/active-recall?Subject=History&Topic=World War I&StudentExplanation=&Score=0&AIFeedback=&CreatedAt=2025-01-20"
-//    },
-//    new CalenderTask
-//    {
-//        Title = "Learn About the French Revolution",
-//        Description = "Understand the events and impact of the French Revolution.",
-//        Url = "/StudyTips/resources?Subject=History&Topic=French Revolution",
-//        Resources = "1. https://example.com/french-revolution\n2. 'Revolutions in History' by Jane Doe\n3. YouTube: https://youtube.com/french-revolution-overview",
-//        AssessmentQuestion = "What were the key events of the French Revolution, and how did they change France?",
-//        RecallPrompt = "/StudyTips/active-recall?Subject=History&Topic=French Revolution&StudentExplanation=&Score=0&AIFeedback=&CreatedAt=2025-01-21"
-//    },
-
-//    // Language-learning tasks
-//    new CalenderTask
-//    {
-//        Title = "Practice Spanish Vocabulary",
-//        Description = "Learn and practice 20 new Spanish words.",
-//        Url = "/StudyTips/resources?Subject=Language&Topic=Spanish Vocabulary",
-//        Resources = "1. https://duolingo.com\n2. 'Spanish for Beginners' by Maria Lopez\n3. YouTube: https://youtube.com/spanish-vocabulary",
-//        AssessmentQuestion = "What is the Spanish word for 'apple', and how do you use it in a sentence?",
-//        RecallPrompt = "/StudyTips/active-recall?Subject=Language&Topic=Spanish Vocabulary&StudentExplanation=&Score=0&AIFeedback=&CreatedAt=2025-01-20"
-//    },
-//    new CalenderTask
-//    {
-//        Title = "Learn Spanish Grammar Basics",
-//        Description = "Understand the rules of Spanish grammar and sentence structure.",
-//        Url = "/StudyTips/resources?Subject=Language&Topic=Spanish Grammar",
-//        Resources = "1. https://spanishdict.com/grammar\n2. 'Grammar Essentials' by Carlos Rivera\n3. YouTube: https://youtube.com/spanish-grammar",
-//        AssessmentQuestion = "What is the rule for conjugating -ar verbs in Spanish?",
-//        RecallPrompt = "/StudyTips/active-recall?Subject=Language&Topic=Spanish Grammar&StudentExplanation=&Score=0&AIFeedback=&CreatedAt=2025-01-21"
-//    }
-//};
-
-//            return View(tasks);
-
-//        }
 
 
         public class CalenderTask
         {
             public string Title { get; set; }
             public string Description { get; set; }
-            public string Url { get; set; }
-            public string Resources { get; set; } // List of learning resources
+            public string Resources  { get; set; } // List of learning resources
             public string AssessmentQuestion { get; set; } // Question for assessment
             public string RecallPrompt { get; set; } // Recall prompt with links
+            public string Date { get; set; }
         }
     }
 

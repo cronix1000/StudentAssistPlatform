@@ -239,7 +239,7 @@
                     CreatedAt: new Date().toISOString(),
                     AudioBase64: reader.result.split(',')[1]
                 };
-                fetch('/StudyTips/GiveFeedback', {
+                fetch('/upload', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(voiceData)
@@ -251,6 +251,22 @@
         function displayFeedback(data) {
             const transcriptArea = document.querySelector('.transcript-area');
             transcriptArea.innerHTML = `<h4>Transcription:</h4><p>${data.transcription}</p>`;
+
+            const voiceData = {
+                Subject: "@Model.Subject",
+                Topic: "@Model.Topic",
+                StudentExplanation: data.transcription,
+                AIFeedback: "",
+                CreatedAt: new Date().toISOString(),
+                AudioBase64: reader.result.split(',')[1]
+            };
+
+            fetch('/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(voiceData)
+            }).then(response => response.json())
+                .then(data => displayFeedback(data));
         }
 
         function updateStatus(message, color) {

@@ -19,14 +19,17 @@
     </div>
 
     <div class="timer-container mt-4">
-        <h3>Time Remaining: <span id="timer">05:00</span></h3>
+        <h3>Time Remaining: <span id="timer">120:00</span></h3>
     </div>
 </div>
+
+
+<a asp-action="ActiveRecall" asp-controller="StudyTips" asp-route-topic="@Model.Topic" asp-route-subject="@Model.Subject">Active Recall   </a>
 
 <script>
     // Timer logic
     const redirectUrl = "/StudyTips/active-recall?Subject=@Model.Subject&Topic=@Model.Topic&StudentExplanation=&Score=0&AIFeedback=&CreatedAt=@Model.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")";
-    let timeRemaining = 5 * 60; // 5 minutes in seconds
+    let timeRemaining = 120 * 60; // 5 minutes in seconds
 
     const timerElement = document.getElementById('timer');
     const interval = setInterval(() => {
