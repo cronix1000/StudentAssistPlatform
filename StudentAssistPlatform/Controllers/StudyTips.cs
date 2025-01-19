@@ -26,7 +26,7 @@ namespace StudentAssistPlatform.Controllers
             return View();
         }
 
-       
+
         public class GradingResult
         {
             public int Score { get; set; }
@@ -55,7 +55,7 @@ namespace StudentAssistPlatform.Controllers
                 Subject = subject
 
             };
-            
+
             return View(learningSession);
         }
 
@@ -96,7 +96,7 @@ namespace StudentAssistPlatform.Controllers
                 var transcription = await _transcriptionService.TranscribeAudioAsync(audioBytes, fileName, contentType);
 
 
-        
+
                 return Ok(new
                 {
                     transcription = transcription,
@@ -118,12 +118,13 @@ namespace StudentAssistPlatform.Controllers
             GradingResult result = await GradeExplanation(session);
 
 
-            return Ok(new {
+            return Ok(new
+            {
                 score = result.Score,
                 feedback = result.Feedback,
                 improvementAreas = result.ImprovementAreas,
                 strengthAreas = result.StrengthAreas
-                });
+            });
 
         }
 
