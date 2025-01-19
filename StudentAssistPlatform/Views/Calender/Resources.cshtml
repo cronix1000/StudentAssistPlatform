@@ -2,7 +2,17 @@
 @{
     ViewData["Title"] = "Resources for " + Model.Topic;
 }
+<style>
+    p {
+        font-size: 19px;
+    }
 
+    li {
+        border: 1px solid black;
+        margin-bottom: 5px;
+        font-size: 19px;
+    }
+</style>
 <div class="container mt-5">
     <!-- Timer Button -->
     <div class="text-end">
@@ -19,17 +29,30 @@
     <!-- Resources List -->
     <div class="resources-list mb-5">
         <h3 class="mb-3 text-success">Study Resources</h3>
+        @if (ViewBag.Resources != null)
+        { 
         <ol class="list-group">
+
             @foreach (var resource in ViewBag.Resources)
             {
-                <li class="list-group-item border-0">@resource</li>
+               <li class="list-group-item border-0">@resource</li>
             }
         </ol>
+         }
+         else {
+                <p class="text-muted">No resources available.</p>
+            }
+        
+            @*@foreach (var resource in ViewBag.Resources)
+            {
+                <li class="list-group-item border-0">* @resource</li>
+            }*@
+        
     </div>
 
     <!-- Active Recall Button -->
     <div class="text-center">
-        <a asp-action="ActiveRecall" asp-controller="StudyTips" asp-route-topic="@Model.Topic" asp-route-subject="@Model.Subject" 
+        <a asp-action="ActiveRecall" asp-controller="StudyTips" asp-route-topic="@Model.Topic" asp-route-subject="@Model.Subject"
            class="btn btn-lg btn-primary px-5 py-3 fw-bold shadow-lg">
             Start Active Recall Practice
         </a>

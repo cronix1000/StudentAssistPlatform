@@ -256,9 +256,6 @@ Ensure the output is a single JSON array (not nested) in this format:
     return View(tasks);
     }
 
-
-
-
         public class CalenderTask
         {
             public string Title { get; set; }

@@ -109,10 +109,6 @@ namespace StudentAssistPlatform.Controllers
             }
         }
 
-
-
-
-
         [HttpPost]
         public async Task<IActionResult> GiveFeedback([FromBody] LearningSession session)
         {
@@ -131,14 +127,18 @@ namespace StudentAssistPlatform.Controllers
 
         }
 
-
         public async Task<GradingResult> GradeExplanation(LearningSession session)
         {
 
             var openAi = new OpenAI_API.OpenAIAPI(_openAIApiKey);
 
             string prompt = $@"You are an expert teacher in {session.Subject}. 
-A student is learning about {session.Topic}. 
+A student is learning about {session.Topic}.
+If the user says any swear words, it is an automatic 0 score and let them know that
+they will not get better at studies if they swear and get mad.
+You will also be very strict, analyzing the effectiveness of the user in educating
+you as if you were a beginner in any subject that is related to school (i.e. math's,
+science, art), etc.
 Here is their explanation of the concept:
 {session.StudentExplanation}
 
