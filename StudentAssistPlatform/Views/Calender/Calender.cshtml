@@ -1,48 +1,121 @@
 ﻿@model IEnumerable<StudentAssistPlatform.Controllers.CalenderController.CalenderTask>
 
-<style>
-    .calendar {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 1rem;
-    }
 
-    .calendar-day {
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        padding: 10px;
-        background-color: #f9f9f9;
-        min-height: 100px;
-        overflow-y: auto;
-    }
+    <style>
+        body{
+        background-color: #FFF8E2;
+        }
 
-        .calendar-day h5 {
-            margin: 0 0 5px;
+        /* General Layout */
+        .calendar-container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #CCC6B4;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        .calendar-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+            /* Weekday Labels */
+            .calendar-header .weekdays {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+
+        .weekday {
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            color: #666;
+        }
+
+        /* Calendar Grid */
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .calendar-day {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            background-color: #f7f9fc;
+            position: relative;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+            .calendar-day:hover {
+                background-color: #d1e7f0;
+                transform: scale(1.02);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .calendar-day h5 {
+                margin: 0;
+                font-size: 16px;
+                color: #333;
+            }
+
+        .task-link {
+            display: block;
+            margin-top: 10px;
             font-size: 14px;
+            color: #388e3c; /* More soothing color */
+            text-decoration: none;
+            border-radius: 4px;
+            padding: 5px;
+            background-color: #c8e6c9; /* Soothing background */
+            transition: background-color 0.3s;
         }
 
-    .task-link {
-        display: block;
-        margin-top: 5px;
-        font-size: 12px;
-        color: #007bff;
-        text-decoration: none;
-    }
+            .task-link:hover {
+                background-color: #a5d6a7;
+                color: #ffffff;
+            }
 
-        .task-link:hover {
-            text-decoration: underline;
+        /* Days without tasks */
+        .calendar-day.empty {
+            background-color: #f1f1f1;
         }
-</style>
 
-<div class="container mt-5">
-    <h1 class="text-center">Daily Learning Flow</h1>
-    <hr />
-    <div id="calendar" class="calendar"></div>
-</div>
+        /* Current Day Highlight */
+        .calendar-day.today {
+            border: 2px solid #388e3c;
+            background-color: #c8e6c9;
+        }
+    </style>
 
-<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <h1 class="text-center">Daily Learning Flow</h1>
+            <hr />
+            <!-- Weekday labels -->
+            <div class="weekdays">
+                <div class="weekday">Sun</div>
+                <div class="weekday">Mon</div>
+                <div class="weekday">Tue</div>
+                <div class="weekday">Wed</div>
+                <div class="weekday">Thu</div>
+                <div class="weekday">Fri</div>
+                <div class="weekday">Sat</div>
+            </div>
+        </div>
+        <div id="calendar" class="calendar"></div>
+    <br /><br /><br />
+    </div>
 
-@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
     <script>
         // Parse tasks from server-side model
         const tasks = @Html.Raw(Json.Serialize(Model));
@@ -53,41 +126,39 @@
             const calendar = $("#calendar");
             calendar.empty();
 
-            // Add empty slots for days before the first day of the month
+            // Empty slots for the first week
             for (let i = 0; i < firstDay; i++) {
-                calendar.append('<div class="calendar-day"></div>');
+                calendar.append('<div class="calendar-day empty"></div>');
             }
 
-            // Add days with tasks
+            // Days with tasks
             for (let day = 1; day <= daysInMonth; day++) {
-                // Format date to match model format (YYYY-MM-DD)
                 const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                const dayTask = tasks.find(task => task.date === date);  // Use correct property name "Date"
+                const dayTask = tasks.find(task => task.date === date);
 
-                let dayHtml = `<div class="calendar-day">
-                                <h5>${day}</h5>`;
-
-
-                console.log(dayTask)
-
+                let dayHtml = `<div class="calendar-day ${isToday(date) ? "today" : ""}">
+                                    <h5>${day}</h5>`;
 
                 if (dayTask) {
                     dayHtml += `
-                                <a href="/Calender/Resources?title=${dayTask.title}&description=${dayTask.description}&resources=${dayTask.resources}&recallPrompt=${dayTask.recallPrompt}"
-                   class="dayTask-link" target="_blank">
-                    ${dayTask.title}
-                </a>`;
+                            <a href="/Calender/Resources?title=${dayTask.title}&description=${dayTask.description}&resources=${dayTask.resources}&recallPrompt=${dayTask.recallPrompt}"
+                               class="task-link" target="_blank">
+                                ${dayTask.title}
+                            </a>`;
                 }
-
-                
 
                 dayHtml += "</div>";
                 calendar.append(dayHtml);
             }
         }
 
+        function isToday(date) {
+            const today = new Date();
+            const formattedToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+            return date === formattedToday;
+        }
+
         // Initialize the calendar with the current month
         const today = new Date();
         initCalendar(today.getMonth(), today.getFullYear());
     </script>
-}
